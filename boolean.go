@@ -2,6 +2,7 @@ package utype
 
 import (
 	"bytes"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -46,13 +47,12 @@ func (b *Boolean) UnmarshalJSON(data []byte) error {
 		str = strconv.Itoa(num)
 	}
 
-	if strings.EqualFold(str, "FALSE") || str == "0" {
-		*b = BooleanFrom(false)
-	} else if strings.EqualFold(str, "TRUE") || str == "1" {
-		*b = BooleanFrom(true)
-	} else {
-		return fmt.Errorf("cannot unmarshal the value %q into boolean type", str)
+	bval, err := convertToBool(str)
+	if err != nil {
+		return err
 	}
+
+	*b = BooleanFrom(bval)
 
 	return nil
 }
@@ -63,14 +63,12 @@ func (b *Boolean) UnmarshalText(text []byte) error {
 		return nil
 	}
 
-	str := string(text)
-	if strings.EqualFold(str, "FALSE") || str == "0" {
-		*b = BooleanFrom(false)
-	} else if strings.EqualFold(str, "TRUE") || str == "1" {
-		*b = BooleanFrom(true)
-	} else {
-		return fmt.Errorf("cannot unmarshal the value %q into boolean type", str)
+	bval, err := convertToBool(string(text))
+	if err != nil {
+		return err
 	}
+
+	*b = BooleanFrom(bval)
 
 	return nil
 }
@@ -85,4 +83,61 @@ func (b *Boolean) MarshalText() (text []byte, err error) {
 	}
 
 	return []byte("false"), nil
+}
+
+func (b Boolean) Value() (driver.Value, error) {
+	if b.Valid {
+		if b.ValueOrZero() {
+			return 1, nil
+		}
+		return 0, nil
+	} else {
+		return nil, nil
+	}
+}
+
+func (b *Boolean) Scan(value interface{}) error {
+	// if value is nil, false
+	if value == nil {
+		b.Valid = false
+		b.Bool.Bool = false
+		return nil
+	}
+
+	bs, err := driver.String.ConvertValue(value)
+	if err != nil {
+		return err
+	}
+
+	var str string
+	switch bs := bs.(type) {
+	case string:
+		str = bs
+	case []byte:
+		str = string(bs)
+	case int:
+		str = strconv.Itoa(bs)
+	}
+
+	bval, err := convertToBool(str)
+	if err != nil {
+		return err
+	}
+
+	*b = BooleanFrom(bval)
+
+	return nil
+}
+
+func convertToBool(str string) (bool, error) {
+	var b bool
+	if strings.EqualFold(str, "FALSE") || str == "0" {
+		b = false
+	} else if strings.EqualFold(str, "TRUE") || str == "1" {
+		b = true
+	} else {
+		return false, fmt.Errorf("cannot unmarshal the value %q into boolean type", str)
+	}
+
+	return b, nil
 }
