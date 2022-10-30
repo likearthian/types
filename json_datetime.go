@@ -65,6 +65,21 @@ func (t JSONDateTime) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.Format(JSONDateTimeFormat))
 }
 
+func (t *JSONDateTime) UnmarshalText(text []byte) error {
+	date, err := time.Parse(JSONDateTimeFormat, string(text))
+	if err != nil {
+		return fmt.Errorf("failed to parse time %s", string(text))
+	}
+
+	*t = NewJSONDateTime(date)
+	return nil
+}
+
+func (t *JSONDateTime) MarshalText() (text []byte, err error) {
+	str := t.ValueOrZero().Format(JSONDateTimeFormat)
+	return []byte(str), nil
+}
+
 func (t JSONDateTime) TimeNow() time.Time {
 	return time.Now()
 }
