@@ -97,7 +97,7 @@ func parseNumFilter(s string) (valid bool, comp string, val float64, err error) 
 	}
 
 	switch comp {
-	case "eq", "gt", "gte", "lt", "lte":
+	case "eq", "gt", "gte", "lt", "lte", "n", "nn":
 		break
 	default:
 		return false, "", 0, fmt.Errorf("unknown comparison operator %q", comp)
